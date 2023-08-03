@@ -33,3 +33,16 @@ def MAE_MSE(pred: torch.Tensor, Y: torch.Tensor):
   square_diff = diff ** 2
 
   return torch.mean(abs_diff), torch.sqrt(torch.mean(square_diff))
+
+
+def square_l2(pred: torch.Tensor, Y: torch.Tensor):
+  diff = torch.sum(pred, dim=[2, 3]) - torch.sum(Y, dim=[2, 3])
+  square_diff = diff ** 2
+
+  return torch.mean(square_diff)
+
+
+def maeloss(pred: torch.Tensor, Y: torch.Tensor):
+  diff = torch.sum(pred, dim=[2, 3]) - torch.sum(Y, dim=[2, 3])
+  abs_diff = torch.abs(diff)
+  return torch.mean(abs_diff)

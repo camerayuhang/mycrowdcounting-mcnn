@@ -28,6 +28,7 @@ class ShanghaitechDataset(Dataset):
     # 确保原图像为RGB图像
     img = Image.open(img_path).convert("RGB")
 
+    # print(img_path)
     # 对训练数据进行增强
     # 转换指的是对当前这个图像进行转换，并不会增加原始图像的数量
     # 同时这个数据集不能做那种flip或者rotation转换，因为这样转换density map会变化

@@ -13,10 +13,11 @@ from tqdm import tqdm
 learning_rate = 1e-7
 decay = 5*1e-4
 batch_size = 1
-epochs = 100
+epochs = 400
 in_channels = 3
 best_loss = 1e7
 pretrain_folder = os.path.join(os.path.dirname(__file__), "../pretrained")
+
 
 # Setting device
 # Get cpu, gpu or mps device for training.
@@ -100,13 +101,13 @@ def train_loop(dataloader: DataLoader, model: nn.Module, loss_fn, optimizer):
   print(f'batches: {num_batches}/{num_batches} - samples: {size}/{size} - loss: {training_loss:.4f} - MAE: {mae} - MSE: {mse}')
 
 
-def save_best(test_loss, optimizer, model: nn.Module):
+def save_best(test_loss, model: nn.Module, optimizer):
   global best_loss
   if test_loss < best_loss:
     best_loss = min(test_loss, best_loss)
     os.makedirs(pretrain_folder, exist_ok=True)
     save_checkpoint({"state_dict": model.state_dict(), "optimizer": optimizer.state_dict(
-    )}, os.path.join(pretrain_folder, "mcnn_checkpoint.pth"))
+    ), "best_loss": best_loss}, os.path.join(pretrain_folder, "mcnn_checkpoint.pth"))
 
 
 def validation_loop(dataloader: DataLoader, model: nn.Module, loss_fn):
@@ -139,13 +140,32 @@ def validation_loop(dataloader: DataLoader, model: nn.Module, loss_fn):
 
 
 def main():
-
+  global best_loss
   # load model
   model = mcnn(in_channels).to(device)
   # 这个loss function默认情况下，输入的yhat和y可以任意的shape，但是会对里面的所有元素取平均，不管shape是几个维度
-  loss_fn = nn.MSELoss()
+  loss_fn = nn.MSELoss(reduction="sum")
   optimizer = torch.optim.Adam(
       params=model.parameters(), lr=learning_rate, weight_decay=decay)
+
+  checkpoint_path = os.path.join(pretrain_folder, "mcnn_checkpoint.pth")
+  if os.path.exists(checkpoint_path):
+    print("=> loading checkpoint '{}'".format(checkpoint_path))
+
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
+    # print(checkpoint.keys())
+    # print(checkpoint["state_dict"].keys())
+    # print(checkpoint["optimizer"].keys())
+    # print(model.state_dict().keys())
+    # print(optimizer.state_dict().keys())
+    model.load_state_dict(checkpoint["state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer"])
+
+    if "best_loss" in checkpoint:
+      best_loss = float(checkpoint["best_loss"])
+
+    print("=> loaded checkpoint '{}' (best_loss {})"
+          .format(checkpoint_path, best_loss))
 
   for i in range(epochs):
     print(f'Epoch {i+1}/{epochs}')
